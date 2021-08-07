@@ -103,7 +103,8 @@ function getNextTrack()
     console.log(" LoopQueue is " + (loopQueue ? "On" : "Off"))
 
     if(loopTrack)
-    {   if(queueIdx < 0) {queueIdx = 0;}
+    {   console.log(queueIdx);
+        if(queueIdx < 0) {queueIdx = 0;}
         return musicQueue[queueIdx];
     }
 
@@ -224,7 +225,7 @@ function gotoTrack(tokens)
     {
         var trackNo = parseInt(tokens[1]);
         if(trackNo >= 0 && trackNo < musicQueue.length)
-        {   
+        {   queueIdx = trackNo;
             var track = musicQueue[trackNo];
             var resource = createAudioResource(musicFolder+track, {
                 inputType: StreamType.OggOpus,
@@ -254,8 +255,8 @@ function toggleLoopTrack(tokens)
     if(tokens.length >1)
     {   
         switch(tokens[1])
-        {   case "on": loopQueue = true; break;
-            case "off": loopQueue = false; break;
+        {   case "on": loopTrack = true; break;
+            case "off": loopTrack = false; break;
             default: console.log("INVALIID OPTION");
         }
     }
@@ -267,8 +268,8 @@ function toggleLoopQueue(tokens)
     if(tokens.length >1)
     {   
         switch(tokens[1])
-        {   case "on": loopTrack = true; break;
-            case "off": loopTrack = false; break;
+        {   case "on": loopQueue = true; break;
+            case "off": loopQueue = false; break;
             default: console.log("INVALIID OPTION");
         }
     }

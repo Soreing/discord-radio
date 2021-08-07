@@ -119,7 +119,7 @@ function getNextTrack()
     }
 
     queueIdx++;
-    if(queueIdx == musicQueue.length)
+    if(queueIdx > musicQueue.length)
     {   if(!loopQueue)
         {   return undefined;
         }
@@ -223,7 +223,7 @@ function gotoTrack(tokens)
 {
     if(tokens.length > 1)
     {
-        var trackNo = parseInt(tokens[1]);
+        var trackNo = parseInt(tokens[1])-1;
         if(trackNo >= 0 && trackNo < musicQueue.length)
         {   queueIdx = trackNo;
             var track = musicQueue[trackNo];
@@ -232,6 +232,61 @@ function gotoTrack(tokens)
             });
 
             player.play(resource);
+        }
+    }
+}
+
+// List the music tracks in the queue with their ID
+function listQueue(msg)
+{
+    var list = "";
+    for(var i=0; i<musicQueue.length; i++)
+    {   list += "["+(i+1)+"] "+ musicQueue[i] + "\n";
+    }
+
+    msg.channel.send(list);
+}
+
+// Adds a new music track to the queue at a specific ID (end by default)
+function addMusic(tokens)
+{
+    var idx = musicQueue.length;
+    
+    if(tokens.length > 2)
+    {   var id = parseInt(tokens[2])-1;
+        if(id >= 0 && id < musicQueue.length)
+        {   idx = id;
+        }
+    }
+
+    if(tokens.length > 1)
+    {   musicQueue.splice(idx, 0, tokens[1]);
+        if(queueIdx >= idx)
+        {   queueIdx++
+        }
+    }
+}
+
+// Removes a music track from the queue by ID or name
+function removeMusic(tokens)
+{
+    if(tokens.length > 1)
+    {
+        var idx = -1;
+        var id = parseInt(tokens[1]);
+
+        if((id+"") == tokens[1])
+        {   idx = id - 1;
+        }
+        else
+        {   idx = musicQueue.indexOf(tokens[1]);
+        }
+
+        if(idx >= 0 && idx < musicQueue.length)
+        {   musicQueue.splice(idx, 1);
+            if(queueIdx > idx )
+            {   queueIdx--;
+            }
         }
     }
 }
@@ -289,6 +344,7 @@ async function onReady()
 async function onMessageCreate(msg)
 {
 	var ltokens = msg.content.toLowerCase().split(" ");
+    var utokens = msg.content.split(" ");
 
 	if(ltokens.length>0)
 	{	switch(ltokens[0])
@@ -301,6 +357,9 @@ async function onMessageCreate(msg)
             case prefix+"restarttrack" : restartTrack(); break; //OK
             case prefix+"next" : nextTrack(); break; //OK
             case prefix+"goto" : gotoTrack(ltokens); break; //OK
+            case prefix+"list" : listQueue(msg); break; //OK
+            case prefix+"add" :  addMusic(utokens);break; //OK
+            case prefix+"remove" : removeMusic(utokens); break; //OK
 
             case prefix+"loopqueue" : toggleLoopQueue(ltokens); break;
             case prefix+"looptrack" : toggleLoopTrack(ltokens); break;

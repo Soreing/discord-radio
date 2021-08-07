@@ -43,21 +43,10 @@ const player = createAudioPlayer();
 //######################## Functions #########################//
 
 // Returns a timestamp in the format "[MM/DD/YYYY hh:mm:ss]"
-function timeStamp(time) {
-  var now = time === undefined ? new Date() : time;
-  return (
-    "[" +
-    (now.getMonth() + 1) +
-    "/" +
-    now.getDate() +
-    "/" +
-    now.getFullYear() +
-    " " +
-    now.getHours() +
-    ":" +
-    (now.getMinutes() < 10 ? "0" + now.getMinutes() : now.getMinutes()) +
-    "]"
-  );
+function timeStamp(time) 
+{
+    var now = time === undefined ? new Date() : time;
+    return ( "[" + (now.getMonth() + 1) + "/" + now.getDate() + "/" + now.getFullYear() + " " + now.getHours() + ":" + (now.getMinutes() < 10 ? "0" + now.getMinutes() : now.getMinutes()) + "]");
 }
 
 // Connects to the same voice channel where the user is
@@ -146,10 +135,9 @@ function getNextTrack()
 }
 // Gets the current track from the Music Queue
 // If the player finished or hasn't started, undefined is returned
-function getCurentTrack() {
-  return queueIdx < 0 || queueIdx >= musicQueue.length
-    ? undefined
-    : musicQueue[queueIdx];
+function getCurentTrack() 
+{
+    return queueIdx < 0 || queueIdx >= musicQueue.length ? undefined : musicQueue[queueIdx];
 }
 
 // Starts playing music in the channel where the bot is connected
@@ -184,22 +172,24 @@ function playMusic(msg)
 
 // Play next track when idle
 player.on(AudioPlayerStatus.Idle, () => {
-  var track = getNextTrack();
-  if (track !== undefined) {
-    var resource = createAudioResource(musicFolder + track, {
-      inputType: StreamType.OggOpus,
-    });
+    var track = getNextTrack();
+    if (track !== undefined) 
+    {   var resource = createAudioResource(musicFolder + track, 
+        {   inputType: StreamType.OggOpus,
+        });
 
-    player.play(resource);
-  }
+        player.play(resource);
+    }
 });
 
+// Pauses the current track
 function pauseTrack(msg)
 {
     player.pause(msg);
     msg.channel.send({embeds: [Embeds.info(color, "Paused playing track")]});
 }
 
+// Resumes the current track
 function resumeTrack(msg)
 {
     player.unpause(msg);
@@ -383,27 +373,29 @@ function toggleLoopQueue(msg, tokens)
     }
 }
 
-function addMusic(msg) {
-  var attachments = msg.attachments;
+function downloadMusic(msg) {
+    var attachments = msg.attachments;
 
-  // If msg has no attachments, exit function
-  if (!attachments)
-  {    msg.channel.send({embeds: [Embeds.error(color, "No Attachments Detected!")]});
-  }
+    // If msg has no attachments, exit function
+    if (!attachments)
+    {   msg.channel.send({embeds: [Embeds.error(color, "No Attachments Detected!")]});
+        return;
+    }
 
-  var oggAttachment = attachments.find(
-    (attachment) => attachment.contentType == "audio/ogg"
-  );
+    var oggAttachment = attachments.find(
+        (attachment) => attachment.contentType == "audio/ogg"
+    );
 
-  // If msg has no ogg attachments, exit function
-  if (!oggAttachment)
-  {    msg.channel.send({embeds: [Embeds.error(color, "No Attachments are not audio/ogg type!")]});
-  }
+    // If msg has no ogg attachments, exit function
+    if (!oggAttachment)
+    {   msg.channel.send({embeds: [Embeds.error(color, "No Attachments are audio/ogg type!")]});
+        return;
+    }
 
-  const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
-  const request = https.get(oggAttachment.url, function (res) {
-    res.pipe(file);
-  });
+    const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
+    const request = https.get(oggAttachment.url, function (res) {
+        res.pipe(file);
+    });
 }
 
 // Displays status information about the radio
@@ -457,7 +449,7 @@ async function onMessageCreate(msg)
             case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
             case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
 
-            case prefix+"addmusic":addMusic(msg); break;
+            case prefix+"download": downloadMusic(msg); break;
         
             case prefix+"help" : msg.channel.send({embeds:[Embeds.help()]}); break; 
             case prefix+"status" : statusInfo(msg); break; 

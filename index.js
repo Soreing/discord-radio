@@ -106,10 +106,6 @@ function getNextTrack()
     {   return undefined;
     }
 
-    console.log(" LoopTrack is " + (loopTrack ? "On" : "Off"))
-    console.log(" Shuffle is " + (shuffle ? "On" : "Off"))
-    console.log(" LoopQueue is " + (loopQueue ? "On" : "Off"))
-
     if(loopTrack)
     {   if(queueIdx < 0) {queueIdx = 0;}
         return musicQueue[queueIdx];
@@ -373,6 +369,22 @@ function toggleLoopQueue(msg, tokens)
     }
 }
 
+// Displays status information about the radio
+function statusInfo(msg)
+{
+    var botVoiceState = msg.guild.voiceStates.cache.find((id)=>{
+        return id == client.user.id; 
+    });
+
+    if(botVoiceState !== undefined)
+    {   msg.channel.send({embeds: [Embeds.status(color, queueIdx, musicQueue, loopQueue, loopTrack, shuffle)]});
+    }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Currently not in any Voice Channel!")]});
+    }
+
+}
+
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
@@ -409,6 +421,7 @@ async function onMessageCreate(msg)
             case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
 
             case prefix+"help" : msg.channel.send({embeds:[Embeds.help()]}); break; 
+            case prefix+"status" : statusInfo(msg); break; 
 		}
 	}	
 }

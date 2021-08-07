@@ -76,5 +76,26 @@ module.exports = {
 
 		return embed;
     },
+
+    // Displays radio information
+    status: function status(color, id, queue, lq, lt, shuf)
+    {
+        var vc  = "`connect`, `disconnect`";
+        var trk = "`play`, `pause`, `resume`, `next`, `goto`, `restartTrack`, `restartQueue`";
+        var que = "`list`, `add`, `remove`";
+        var opt = "`loopQueue`, `loopTrack`, `shuffle`"
+
+        var embed = new MessageEmbed()
+            .setColor(color)
+            .setDescription("**ℹ️ Status Information**\n"+
+                "Currently Playing:\n"+ (id >= 0 ? ("["+(id+1)+"] - " + queue[id]) : "--- Nothing ---")+
+                "\n\nNumber of Tracks in the Queue: **"+ queue.length+ "**\n" +
+                "[Loop Queue]:  **" + (lq ? "ON" : "OFF")+"**\n" +
+                "[Loop Current Track]:  **" + (lt ? "ON" : "OFF")+"**\n" +
+                "[Shuffle Tracks]:  **" + (shuf ? "ON" : "OFF")+"**\n"
+            )
+
+		return embed;
+    },
 	
 };

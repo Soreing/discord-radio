@@ -2,6 +2,9 @@
 require('dotenv').config();
 
 const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
+const { createAudioResource, StreamType } = require('@discordjs/voice');
+const { createAudioPlayer} = require('@discordjs/voice');
+const { AudioPlayerStatus } = require('@discordjs/voice');
 
 const { Client, Intents, MessageSelectMenu } = require('discord.js');
 const client = new Client({ intents: [
@@ -21,7 +24,11 @@ var loopQueue = false;
 var loopTrack = false;
 
 var queueIdx = -1;
-var musicQueue = [];
+var musicFolder = "./Music/";
+var musicQueue  = ["music.ogg", "quack.ogg", "nothing.ogg"];
+
+
+const player = createAudioPlayer();
 
 //######################## Functions #########################//
 
@@ -36,18 +43,18 @@ function timeStamp(time)
 // Errors can arise when the user is not in a channel or when the bot has no join permission
 function connectChannel(msg)
 {
-    var usrVocieState = msg.guild.voiceStates.cache.find((id)=>{
+    var usrVoiceState = msg.guild.voiceStates.cache.find((id)=>{
         return id == msg.author.id; 
     });
 
-    if(usrVocieState !== undefined)
+    if(usrVoiceState !== undefined)
     {
-        if(usrVocieState.channel.joinable)
+        if(usrVoiceState.channel.joinable)
         {   
             var connection = joinVoiceChannel({
-                channelId: usrVocieState.channel.id,
-                guildId: usrVocieState.guild.id,
-                adapterCreator: usrVocieState.guild.voiceAdapterCreator,
+                channelId: usrVoiceState.channel.id,
+                guildId: usrVoiceState.guild.id,
+                adapterCreator: usrVoiceState.guild.voiceAdapterCreator,
             });
         }
         else
@@ -63,11 +70,11 @@ function connectChannel(msg)
 // Errors can arise when the bot is not in any voice channels
 function disconnectChannel(msg)
 {
-    var usrVocieState = msg.guild.voiceStates.cache.find((id)=>{
+    var botVoiceState = msg.guild.voiceStates.cache.find((id)=>{
         return id == client.user.id; 
     });
 
-    if(usrVocieState !== undefined)
+    if(botVoiceState !== undefined)
     {
         var connection = getVoiceConnection(msg.guild.id);
         if(connection !== undefined)
@@ -78,6 +85,72 @@ function disconnectChannel(msg)
     {   console.log("NOT IN VOICE CHANNEL");
     }
 }
+
+// Gets the next track from the Music Queue based on settings
+// If no track is left, undefined is returned
+function getNextTrack()
+{
+    if(musicQueue.length == 0)
+    {   return undefined;
+    }
+
+    if(loopTrack)
+    {   return musicQueue[queueIdx < 0 ? 0 : queueIdx];
+    }
+
+    if(shuffle)
+    {   return musicQueue[Math.floor(Math.random() * musicQueue.length)];
+    }
+
+    queueIdx++;
+    if(queueIdx == musicQueue.length)
+    {   if(!loopQueue)
+        {   return undefined;
+        }
+        queueIdx = 0;
+    }
+
+    return musicQueue[queueIdx];
+}
+
+// Starts playing music in the channel where the bot is connected
+// Errors can arise when the bot is not in any voice channels
+function playMusic(msg)
+{
+    var botVoiceState = msg.guild.voiceStates.cache.find((id)=>{
+        return id == client.user.id; 
+    });
+
+    if(botVoiceState !== undefined)
+    {
+        var connection = getVoiceConnection(msg.guild.id);
+        if(connection !== undefined)
+        {   var track = getNextTrack();
+            console.log(musicFolder+track);
+            if(track !== undefined)
+            {   var resource = createAudioResource(musicFolder+track, {
+                    inputType: StreamType.OggOpus,
+                });
+                player.play(resource);
+                connection.subscribe(player);
+            }
+        }
+    }
+    else
+    {   console.log("NOT IN VOICE CHANNEL");
+    }
+}
+
+// Play next track when idle
+player.on(AudioPlayerStatus.Idle, () => {
+	var track = getNextTrack();
+    if(track !== undefined)
+    {   var resource = createAudioResource(musicFolder+track, {
+            inputType: StreamType.OggOpus,
+        });
+        player.play(resource);
+    }
+});
 
 // Toggles music track shuffling On/Off
 function toggleShuffle(tokens)
@@ -137,7 +210,8 @@ async function onMessageCreate(msg)
 	{	switch(ltokens[0])
 		{	case prefix+"connect" : connectChannel(msg); break;
             case prefix+"disconnect" : disconnectChannel(msg); break;
-            
+            case prefix+"play" : playMusic(msg); break;
+
             case prefix+"loopqueue" : toggleLoopQueue(ltokens); break;
             case prefix+"looptrack" : toggleLoopQueue(ltokens); break;
             case prefix+"shuffle" : toggleShuffle(ltokens); break;

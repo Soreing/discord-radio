@@ -52,6 +52,26 @@ function connectChannel(msg)
     }
 }
 
+// Disconnects from the voice channel if already connected to one
+// Errors can arise when the bot is not in any voice channels
+function disconnectChannel(msg)
+{
+    var usrVocieState = msg.guild.voiceStates.cache.find((id)=>{
+        return id == client.user.id; 
+    });
+
+    if(usrVocieState !== undefined)
+    {
+        var connection = getVoiceConnection(msg.guild.id);
+        if(connection !== undefined)
+        {   connection.destroy();
+        }
+    }
+    else
+    {   console.log("NOT IN VOICE CHANNEL");
+    }
+}
+
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
@@ -70,6 +90,7 @@ async function onMessageCreate(msg)
 	if(ltokens.length>0)
 	{	switch(ltokens[0])
 		{	case prefix+"connect" : connectChannel(msg); break;
+            case prefix+"disconnect" : disconnectChannel(msg); break;
 		}
 	}	
 }

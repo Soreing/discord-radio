@@ -1,6 +1,8 @@
 //####################### Dependencies #######################//
 require('dotenv').config();
 
+const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
+
 const { Client, Intents, MessageSelectMenu } = require('discord.js');
 const client = new Client({ intents: [
     Intents.FLAGS.GUILDS, 
@@ -23,6 +25,33 @@ function timeStamp(time)
     return "["+(now.getMonth()+1)+'/'+now.getDate()+'/'+now.getFullYear()+" "+now.getHours()+':'+ (now.getMinutes() < 10 ? '0'+ now.getMinutes() : now.getMinutes()) + "]";
 }
 
+// Connects to the same voice channel where the user is
+// Errors can arise when the user is not in a channel or when the bot has no join permission
+function connectChannel(msg)
+{
+    var usrVocieState = msg.guild.voiceStates.cache.find((id)=>{
+        return id == msg.author.id; 
+    });
+
+    if(usrVocieState !== undefined)
+    {
+        if(usrVocieState.channel.joinable)
+        {   
+            var connection = joinVoiceChannel({
+                channelId: usrVocieState.channel.id,
+                guildId: usrVocieState.guild.id,
+                adapterCreator: usrVocieState.guild.voiceAdapterCreator,
+            });
+        }
+        else
+        {   console.log("NO JOIN PERMISSION");
+        }
+    }
+    else
+    {   console.log("NOT IN VOICE CHANNEL");
+    }
+}
+
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
@@ -40,7 +69,7 @@ async function onMessageCreate(msg)
 
 	if(ltokens.length>0)
 	{	switch(ltokens[0])
-		{	case prefix+"ping" : msg.channel.send("pong"); break;
+		{	case prefix+"connect" : connectChannel(msg); break;
 		}
 	}	
 }

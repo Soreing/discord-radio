@@ -10,41 +10,54 @@ const { AudioPlayerStatus } = require('@discordjs/voice');
 const { MessageEmbed } = require('discord.js');
 
 const { Client, Intents, MessageSelectMenu, MessageFlags } = require('discord.js');
-const client = new Client({ intents: [
+const client = new Client({
+  intents: [
     Intents.FLAGS.GUILDS, 
     Intents.FLAGS.GUILD_MESSAGES, 
     Intents.FLAGS.GUILD_VOICE_STATES] 
 });
 
+const fs = require("fs");
+const https = require("https");
 
 //####################### Gloval Vars ########################//
 
-var ready  = false;
+var ready = false;
 var prefix = ".";
 var color  = '#FF0000'
 
-var shuffle   = false;
+var shuffle = false;
 var loopQueue = false;
 var loopTrack = false;
 
 var queueIdx = -1;
 var musicFolder = "./Music/";
-var musicQueue  = [
-    "Touhou_Hisouten.ogg", 
-    "Shoujo_Misshitsu.ogg", 
-    "Reigin_Kansui.ogg"
+var musicQueue = [
+  "Touhou_Hisouten.ogg",
+  "Shoujo_Misshitsu.ogg",
+  "Reigin_Kansui.ogg",
 ];
-
 
 const player = createAudioPlayer();
 
 //######################## Functions #########################//
 
 // Returns a timestamp in the format "[MM/DD/YYYY hh:mm:ss]"
-function timeStamp(time)
-{
-    var now = (time === undefined ? new Date() : time);
-    return "["+(now.getMonth()+1)+'/'+now.getDate()+'/'+now.getFullYear()+" "+now.getHours()+':'+ (now.getMinutes() < 10 ? '0'+ now.getMinutes() : now.getMinutes()) + "]";
+function timeStamp(time) {
+  var now = time === undefined ? new Date() : time;
+  return (
+    "[" +
+    (now.getMonth() + 1) +
+    "/" +
+    now.getDate() +
+    "/" +
+    now.getFullYear() +
+    " " +
+    now.getHours() +
+    ":" +
+    (now.getMinutes() < 10 ? "0" + now.getMinutes() : now.getMinutes()) +
+    "]"
+  );
 }
 
 // Connects to the same voice channel where the user is
@@ -131,15 +144,17 @@ function getNextTrack()
 
     return musicQueue[queueIdx];
 }
-
 // Gets the current track from the Music Queue
 // If the player finished or hasn't started, undefined is returned
-function getCurentTrack()
-{    return queueIdx < 0 || queueIdx >= musicQueue.length ? undefined : musicQueue[queueIdx];
+function getCurentTrack() {
+  return queueIdx < 0 || queueIdx >= musicQueue.length
+    ? undefined
+    : musicQueue[queueIdx];
 }
 
 // Starts playing music in the channel where the bot is connected
 // Errors can arise when the bot is not in any voice channels
+
 function playMusic(msg)
 {
     var botVoiceState = msg.guild.voiceStates.cache.find((id)=>{
@@ -169,15 +184,14 @@ function playMusic(msg)
 
 // Play next track when idle
 player.on(AudioPlayerStatus.Idle, () => {
-	var track = getNextTrack();
-    if(track !== undefined)
-    {   
-        var resource = createAudioResource(musicFolder+track, {
-            inputType: StreamType.OggOpus,
-        });
-        
-        player.play(resource);
-    }
+  var track = getNextTrack();
+  if (track !== undefined) {
+    var resource = createAudioResource(musicFolder + track, {
+      inputType: StreamType.OggOpus,
+    });
+
+    player.play(resource);
+  }
 });
 
 function pauseTrack(msg)
@@ -369,6 +383,29 @@ function toggleLoopQueue(msg, tokens)
     }
 }
 
+function addMusic(msg) {
+  var attachments = msg.attachments;
+
+  // If msg has no attachments, exit function
+  if (!attachments)
+  {    msg.channel.send({embeds: [Embeds.error(color, "No Attachments Detected!")]});
+  }
+
+  var oggAttachment = attachments.find(
+    (attachment) => attachment.contentType == "audio/ogg"
+  );
+
+  // If msg has no ogg attachments, exit function
+  if (!oggAttachment)
+  {    msg.channel.send({embeds: [Embeds.error(color, "No Attachments are not audio/ogg type!")]});
+  }
+
+  const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
+  const request = https.get(oggAttachment.url, function (res) {
+    res.pipe(file);
+  });
+}
+
 // Displays status information about the radio
 function statusInfo(msg)
 {
@@ -388,14 +425,14 @@ function statusInfo(msg)
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
-async function onReady()
-{
-	ready = true;
-	console.log("\x1b[33m" + timeStamp() + " Radio-Bot Started!\x1b[0m");
+async function onReady() {
+  ready = true;
+  console.log("\x1b[33m" + timeStamp() + " Radio-Bot Started!\x1b[0m");
 }
 
 // Event that executes when the client detects a message created
 // The message is tokenized into uniformly lowercase elements to be used for commands
+
 async function onMessageCreate(msg)
 {
 	var ltokens = msg.content.toLowerCase().split(" ");
@@ -420,13 +457,15 @@ async function onMessageCreate(msg)
             case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
             case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
 
+            case prefix+"addmusic":addMusic(msg); break;
+        
             case prefix+"help" : msg.channel.send({embeds:[Embeds.help()]}); break; 
             case prefix+"status" : statusInfo(msg); break; 
 		}
 	}	
 }
 
-client.on("ready",   onReady);
-client.on("messageCreate",   onMessageCreate);
+client.on("ready", onReady);
+client.on("messageCreate", onMessageCreate);
 
 client.login(process.env.BOT_TOKEN);

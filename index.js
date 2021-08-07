@@ -16,6 +16,13 @@ const client = new Client({ intents: [
 var ready  = false;
 var prefix = ".";
 
+var shuffle   = false;
+var loopQueue = false;
+var loopTrack = false;
+
+var queueIdx = -1;
+var musicQueue = [];
+
 //######################## Functions #########################//
 
 // Returns a timestamp in the format "[MM/DD/YYYY hh:mm:ss]"
@@ -72,6 +79,45 @@ function disconnectChannel(msg)
     }
 }
 
+// Toggles music track shuffling On/Off
+function toggleShuffle(tokens)
+{
+    if(tokens.length >1)
+    {   
+        switch(tokens[1])
+        {   case "on": shuffle = true; break;
+            case "off": shuffle = false; break;
+            default: console.log("INVALIID OPTION");
+        }
+    }
+}
+
+// Toggles music track looping On/Off
+function toggleLoopTrack(tokens)
+{
+    if(tokens.length >1)
+    {   
+        switch(tokens[1])
+        {   case "on": loopQueue = true; break;
+            case "off": loopQueue = false; break;
+            default: console.log("INVALIID OPTION");
+        }
+    }
+}
+
+// Toggles music queue looping On/Off
+function toggleLoopQueue(tokens)
+{
+    if(tokens.length >1)
+    {   
+        switch(tokens[1])
+        {   case "on": loopTrack = true; break;
+            case "off": loopTrack = false; break;
+            default: console.log("INVALIID OPTION");
+        }
+    }
+}
+
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
@@ -91,6 +137,10 @@ async function onMessageCreate(msg)
 	{	switch(ltokens[0])
 		{	case prefix+"connect" : connectChannel(msg); break;
             case prefix+"disconnect" : disconnectChannel(msg); break;
+            
+            case prefix+"loopqueue" : toggleLoopQueue(ltokens); break;
+            case prefix+"looptrack" : toggleLoopQueue(ltokens); break;
+            case prefix+"shuffle" : toggleShuffle(ltokens); break;
 		}
 	}	
 }

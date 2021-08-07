@@ -1,12 +1,15 @@
 //####################### Dependencies #######################//
 require('dotenv').config();
 
+const Embeds = require('./embeds.js');
+
 const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { createAudioResource, StreamType } = require('@discordjs/voice');
 const { createAudioPlayer} = require('@discordjs/voice');
 const { AudioPlayerStatus } = require('@discordjs/voice');
+const { MessageEmbed } = require('discord.js');
 
-const { Client, Intents, MessageSelectMenu } = require('discord.js');
+const { Client, Intents, MessageSelectMenu, MessageFlags } = require('discord.js');
 const client = new Client({ intents: [
     Intents.FLAGS.GUILDS, 
     Intents.FLAGS.GUILD_MESSAGES, 
@@ -18,6 +21,7 @@ const client = new Client({ intents: [
 
 var ready  = false;
 var prefix = ".";
+var color  = '#FF0000'
 
 var shuffle   = false;
 var loopQueue = false;
@@ -60,13 +64,15 @@ function connectChannel(msg)
                 guildId: usrVoiceState.guild.id,
                 adapterCreator: usrVoiceState.guild.voiceAdapterCreator,
             });
+
+            msg.channel.send({embeds: [Embeds.info(color, "Joined your Voice Channel!")]});
         }
         else
-        {   console.log("NO JOIN PERMISSION");
+        {   msg.channel.send({embeds: [Embeds.error(color, "Don't have permission to join your Voice Channel!")]});
         }
     }
     else
-    {   console.log("NOT IN VOICE CHANNEL");
+    {   msg.channel.send({embeds: [Embeds.error(color, "Need to be in a Voice Channel to use this command!")]});
     }
 }
 
@@ -84,9 +90,11 @@ function disconnectChannel(msg)
         if(connection !== undefined)
         {   connection.destroy();
         }
+
+        msg.channel.send({embeds: [Embeds.info(color, "Left the Voice Channel!")]});
     }
     else
-    {   console.log("NOT IN VOICE CHANNEL");
+    {   msg.channel.send({embeds: [Embeds.error(color, "Not in any Voice Channels to leave!")]});
     }
 }
 
@@ -154,11 +162,13 @@ function playMusic(msg)
                 });
                 player.play(resource);
                 connection.subscribe(player);
+
+                msg.channel.send({embeds: [Embeds.trackInfo(color, "Started playing track", queueIdx+1, track)]});
             }
         }
     }
     else
-    {   console.log("NOT IN VOICE CHANNEL");
+    {   msg.channel.send({embeds: [Embeds.error(color, "Need to join a Voice Channel before playing music!")]});
     }
 }
 
@@ -175,8 +185,20 @@ player.on(AudioPlayerStatus.Idle, () => {
     }
 });
 
+function pauseTrack(msg)
+{
+    player.pause(msg);
+    msg.channel.send({embeds: [Embeds.info(color, "Paused playing track")]});
+}
+
+function resumeTrack(msg)
+{
+    player.unpause(msg);
+    msg.channel.send({embeds: [Embeds.trackInfo(color, "Resuming playing track", queueIdx+1, musicQueue[queueIdx])]});
+}
+
 // Restarts playing the current track
-function restartTrack()
+function restartTrack(msg)
 {
     var track = getCurentTrack();
     if(track !== undefined)
@@ -186,11 +208,12 @@ function restartTrack()
         });
         
         player.play(resource);
+        msg.channel.send({embeds: [Embeds.trackInfo(color, "Rewinding current track", queueIdx+1, track)]});
     }
 }
 
 // Restarts the queue at track 0 and starts playing it
-function restartQueue()
+function restartQueue(msg)
 {
     queueIdx = -1;
     var track = getNextTrack();
@@ -201,11 +224,12 @@ function restartQueue()
         });
 
         player.play(resource);
+        msg.channel.send({embeds: [Embeds.trackInfo(color, "Restarting queue at track", queueIdx+1, track)]});
     }
 }
 
 // Restarts the queue at track 0 and starts playing it
-function nextTrack()
+function nextTrack(msg)
 {
     var track = getNextTrack();
     if(track !== undefined)
@@ -215,11 +239,12 @@ function nextTrack()
         });
 
         player.play(resource);
+        msg.channel.send({embeds: [Embeds.trackInfo(color, "Skipping to the next track", queueIdx+1, track)]});
     }
 }
 
 // Restarts the queue at track 0 and starts playing it
-function gotoTrack(tokens)
+function gotoTrack(msg, tokens)
 {
     if(tokens.length > 1)
     {
@@ -232,6 +257,7 @@ function gotoTrack(tokens)
             });
 
             player.play(resource);
+            msg.channel.send({embeds: [Embeds.trackInfo(color, "Skipping to track", queueIdx+1, track)]});
         }
     }
 }
@@ -239,16 +265,11 @@ function gotoTrack(tokens)
 // List the music tracks in the queue with their ID
 function listQueue(msg)
 {
-    var list = "";
-    for(var i=0; i<musicQueue.length; i++)
-    {   list += "["+(i+1)+"] "+ musicQueue[i] + "\n";
-    }
-
-    msg.channel.send(list);
+    msg.channel.send({embeds: [Embeds.listQueue(color, musicQueue)]});
 }
 
 // Adds a new music track to the queue at a specific ID (end by default)
-function addMusic(tokens)
+function addMusic(msg, tokens)
 {
     var idx = musicQueue.length;
     
@@ -260,15 +281,20 @@ function addMusic(tokens)
     }
 
     if(tokens.length > 1)
-    {   musicQueue.splice(idx, 0, tokens[1]);
+    {   msg.channel.send({embeds: [Embeds.trackInfo(color, "Added new track to the queue", idx+1, tokens[1])]});
+        
+        musicQueue.splice(idx, 0, tokens[1]);
         if(queueIdx >= idx)
         {   queueIdx++
         }
     }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Missing File Name to add a track!")]});
+    }
 }
 
 // Removes a music track from the queue by ID or name
-function removeMusic(tokens)
+function removeMusic(msg, tokens)
 {
     if(tokens.length > 1)
     {
@@ -283,50 +309,68 @@ function removeMusic(tokens)
         }
 
         if(idx >= 0 && idx < musicQueue.length)
-        {   musicQueue.splice(idx, 1);
+        {   var track = musicQueue[idx];
+            msg.channel.send({embeds: [Embeds.trackInfo(color, "Removed a track from the queue", "-", track)]});
+
+            musicQueue.splice(idx, 1);
             if(queueIdx > idx )
             {   queueIdx--;
             }
         }
     }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Missing ID or File Name to remove a track!")]});
+    }
 }
 
 // Toggles music track shuffling On/Off
-function toggleShuffle(tokens)
+function toggleShuffle(msg, tokens)
 {
     if(tokens.length >1)
     {   
         switch(tokens[1])
         {   case "on": shuffle = true; break;
             case "off": shuffle = false; break;
-            default: console.log("INVALIID OPTION");
+            default: msg.channel.send({embeds: [Embeds.error(color, "Invalid Option! Expected [On/Off]")]});
         }
+        msg.channel.send({embeds: [Embeds.settings(color, "Shuffle Tracks", tokens[1])]});
+    }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Missing Option! Expected [On/Off]")]});
     }
 }
 
 // Toggles music track looping On/Off
-function toggleLoopTrack(tokens)
+function toggleLoopTrack(msg, tokens)
 {
     if(tokens.length >1)
     {   
         switch(tokens[1])
         {   case "on": loopTrack = true; break;
             case "off": loopTrack = false; break;
-            default: console.log("INVALIID OPTION");
+            default: msg.channel.send({embeds: [Embeds.error(color, "Invalid Option! Expected [On/Off]")]}); return;
         }
+        msg.channel.send({embeds: [Embeds.settings(color, "Loop Current Track", tokens[1])]});
+    }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Missing Option! Expected [On/Off]")]});
     }
 }
 
 // Toggles music queue looping On/Off
-function toggleLoopQueue(tokens)
+function toggleLoopQueue(msg, tokens)
 {
     if(tokens.length >1)
     {   
         switch(tokens[1])
         {   case "on": loopQueue = true; break;
             case "off": loopQueue = false; break;
-            default: console.log("INVALIID OPTION");
+            default: msg.channel.send({embeds: [Embeds.error(color, "Invalid Option! Expected [On/Off]")]});
         }
+        msg.channel.send({embeds: [Embeds.settings(color, "Loop Queue", tokens[1])]});
+    }
+    else
+    {   msg.channel.send({embeds: [Embeds.error(color, "Missing Option! Expected [On/Off]")]});
     }
 }
 
@@ -351,19 +395,25 @@ async function onMessageCreate(msg)
 		{	case prefix+"connect" : connectChannel(msg); break; //OK
             case prefix+"disconnect" : disconnectChannel(msg); break; //OK
             case prefix+"play" : playMusic(msg); break; //OK
-            case prefix+"pause" : player.pause(); break; //OK
-            case prefix+"resume" : player.unpause(); break; //OK
-            case prefix+"restartqueue" : restartQueue(); break; //OK
-            case prefix+"restarttrack" : restartTrack(); break; //OK
-            case prefix+"next" : nextTrack(); break; //OK
-            case prefix+"goto" : gotoTrack(ltokens); break; //OK
+            case prefix+"pause" : pauseTrack(msg); break; //OK
+            case prefix+"resume" : resumeTrack(msg); break; //OK
+            case prefix+"restartqueue" : restartQueue(msg); break; //OK
+            case prefix+"restarttrack" : restartTrack(msg); break; //OK
+            case prefix+"next" : nextTrack(msg); break; //OK
+            case prefix+"goto" : gotoTrack(msg, ltokens); break; //OK
             case prefix+"list" : listQueue(msg); break; //OK
-            case prefix+"add" :  addMusic(utokens);break; //OK
-            case prefix+"remove" : removeMusic(utokens); break; //OK
+            case prefix+"add" :  addMusic(msg, utokens);break; //OK
+            case prefix+"remove" : removeMusic(msg, utokens); break; //OK
 
-            case prefix+"loopqueue" : toggleLoopQueue(ltokens); break;
-            case prefix+"looptrack" : toggleLoopTrack(ltokens); break;
-            case prefix+"shuffle" : toggleShuffle(ltokens); break; //OK
+            case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
+            case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
+            case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
+            case prefix+"embed":
+                var emb = new MessageEmbed();
+                emb.setTitle('Some title');
+                console.log(emb);
+                msg.channel.send({embeds: [emb]});
+                break;
 		}
 	}	
 }

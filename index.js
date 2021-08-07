@@ -25,7 +25,11 @@ var loopTrack = false;
 
 var queueIdx = -1;
 var musicFolder = "./Music/";
-var musicQueue  = ["music.ogg", "quack.ogg", "nothing.ogg"];
+var musicQueue  = [
+    "Touhou_Hisouten.ogg", 
+    "Shoujo_Misshitsu.ogg", 
+    "Reigin_Kansui.ogg"
+];
 
 
 const player = createAudioPlayer();
@@ -94,12 +98,23 @@ function getNextTrack()
     {   return undefined;
     }
 
+    console.log(" LoopTrack is " + (loopTrack ? "On" : "Off"))
+    console.log(" Shuffle is " + (shuffle ? "On" : "Off"))
+    console.log(" LoopQueue is " + (loopQueue ? "On" : "Off"))
+
     if(loopTrack)
-    {   return musicQueue[queueIdx < 0 ? 0 : queueIdx];
+    {   if(queueIdx < 0) {queueIdx = 0;}
+        return musicQueue[queueIdx];
     }
 
     if(shuffle)
-    {   return musicQueue[Math.floor(Math.random() * musicQueue.length)];
+    {   var rnd = queueIdx;
+        while(rnd == queueIdx)
+        {   rnd =  Math.floor(Math.random() * musicQueue.length);
+        }
+        
+        queueIdx = Math.floor(rnd);
+        return musicQueue[queueIdx];
     }
 
     queueIdx++;
@@ -111,6 +126,12 @@ function getNextTrack()
     }
 
     return musicQueue[queueIdx];
+}
+
+// Gets the current track from the Music Queue
+// If the player finished or hasn't started, undefined is returned
+function getCurentTrack()
+{    return queueIdx < 0 || queueIdx >= musicQueue.length ? undefined : musicQueue[queueIdx];
 }
 
 // Starts playing music in the channel where the bot is connected
@@ -126,7 +147,6 @@ function playMusic(msg)
         var connection = getVoiceConnection(msg.guild.id);
         if(connection !== undefined)
         {   var track = getNextTrack();
-            console.log(musicFolder+track);
             if(track !== undefined)
             {   var resource = createAudioResource(musicFolder+track, {
                     inputType: StreamType.OggOpus,
@@ -145,12 +165,75 @@ function playMusic(msg)
 player.on(AudioPlayerStatus.Idle, () => {
 	var track = getNextTrack();
     if(track !== undefined)
-    {   var resource = createAudioResource(musicFolder+track, {
+    {   
+        var resource = createAudioResource(musicFolder+track, {
             inputType: StreamType.OggOpus,
         });
+        
         player.play(resource);
     }
 });
+
+// Restarts playing the current track
+function restartTrack()
+{
+    var track = getCurentTrack();
+    if(track !== undefined)
+    {   
+        var resource = createAudioResource(musicFolder+track, {
+            inputType: StreamType.OggOpus,
+        });
+        
+        player.play(resource);
+    }
+}
+
+// Restarts the queue at track 0 and starts playing it
+function restartQueue()
+{
+    queueIdx = -1;
+    var track = getNextTrack();
+    if(track !== undefined)
+    {   
+        var resource = createAudioResource(musicFolder+track, {
+            inputType: StreamType.OggOpus,
+        });
+
+        player.play(resource);
+    }
+}
+
+// Restarts the queue at track 0 and starts playing it
+function nextTrack()
+{
+    var track = getNextTrack();
+    if(track !== undefined)
+    {   
+        var resource = createAudioResource(musicFolder+track, {
+            inputType: StreamType.OggOpus,
+        });
+
+        player.play(resource);
+    }
+}
+
+// Restarts the queue at track 0 and starts playing it
+function gotoTrack(tokens)
+{
+    if(tokens.length > 1)
+    {
+        var trackNo = parseInt(tokens[1]);
+        if(trackNo >= 0 && trackNo < musicQueue.length)
+        {   
+            var track = musicQueue[trackNo];
+            var resource = createAudioResource(musicFolder+track, {
+                inputType: StreamType.OggOpus,
+            });
+
+            player.play(resource);
+        }
+    }
+}
 
 // Toggles music track shuffling On/Off
 function toggleShuffle(tokens)
@@ -208,13 +291,19 @@ async function onMessageCreate(msg)
 
 	if(ltokens.length>0)
 	{	switch(ltokens[0])
-		{	case prefix+"connect" : connectChannel(msg); break;
-            case prefix+"disconnect" : disconnectChannel(msg); break;
-            case prefix+"play" : playMusic(msg); break;
+		{	case prefix+"connect" : connectChannel(msg); break; //OK
+            case prefix+"disconnect" : disconnectChannel(msg); break; //OK
+            case prefix+"play" : playMusic(msg); break; //OK
+            case prefix+"pause" : player.pause(); break; //OK
+            case prefix+"resume" : player.unpause(); break; //OK
+            case prefix+"restartqueue" : restartQueue(); break; //OK
+            case prefix+"restarttrack" : restartTrack(); break; //OK
+            case prefix+"next" : nextTrack(); break; //OK
+            case prefix+"goto" : gotoTrack(ltokens); break; //OK
 
             case prefix+"loopqueue" : toggleLoopQueue(ltokens); break;
-            case prefix+"looptrack" : toggleLoopQueue(ltokens); break;
-            case prefix+"shuffle" : toggleShuffle(ltokens); break;
+            case prefix+"looptrack" : toggleLoopTrack(ltokens); break;
+            case prefix+"shuffle" : toggleShuffle(ltokens); break; //OK
 		}
 	}	
 }

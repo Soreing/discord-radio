@@ -111,8 +111,7 @@ function getNextTrack()
     console.log(" LoopQueue is " + (loopQueue ? "On" : "Off"))
 
     if(loopTrack)
-    {   console.log(queueIdx);
-        if(queueIdx < 0) {queueIdx = 0;}
+    {   if(queueIdx < 0) {queueIdx = 0;}
         return musicQueue[queueIdx];
     }
 
@@ -408,12 +407,8 @@ async function onMessageCreate(msg)
             case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
             case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
             case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
-            case prefix+"embed":
-                var emb = new MessageEmbed();
-                emb.setTitle('Some title');
-                console.log(emb);
-                msg.channel.send({embeds: [emb]});
-                break;
+
+            case prefix+"help" : msg.channel.send({embeds:[Embeds.help()]}); break; 
 		}
 	}	
 }

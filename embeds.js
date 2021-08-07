@@ -55,6 +55,26 @@ module.exports = {
 		    .setDescription("**✅ List of Music Tracks in the Queue**\n"+tracks);
 
 		return embed;
-    }
+    },
+
+    // Displays help information
+    help: function help(color, queue)
+    {
+        var vc  = "`connect`, `disconnect`";
+        var trk = "`play`, `pause`, `resume`, `next`, `goto`, `restartTrack`, `restartQueue`";
+        var que = "`list`, `add`, `remove`";
+        var opt = "`loopQueue`, `loopTrack`, `shuffle`"
+
+        var embed = new MessageEmbed()
+            .setColor(color)
+            .setTitle("**❔ Radio Bot**")
+		    .setDescription("RadioBot plays music for you 24/7 in a Voice Channel.\n Add tracks to the queue and let it play.\n​")
+            .addField("Voice Channel Joning", vc)
+            .addField("Music Tracks", trk)
+            .addField("Queue Manipulation", que)
+            .addField("Settings", opt)
+
+		return embed;
+    },
 	
 };

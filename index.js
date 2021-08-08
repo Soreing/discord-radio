@@ -7,7 +7,7 @@ const { joinVoiceChannel, getVoiceConnection } = require('@discordjs/voice');
 const { createAudioResource, StreamType } = require('@discordjs/voice');
 const { createAudioPlayer} = require('@discordjs/voice');
 const { AudioPlayerStatus } = require('@discordjs/voice');
-const { MessageEmbed } = require('discord.js');
+const { MessageEmbed, Permissions } = require('discord.js');
 
 const { Client, Intents, MessageSelectMenu, MessageFlags } = require('discord.js');
 const client = new Client({
@@ -23,7 +23,7 @@ const https = require("https");
 //####################### Gloval Vars ########################//
 
 var ready = false;
-var prefix = ".";
+var prefix = "-";
 var color  = '#FF0000'
 
 var shuffle = false;
@@ -32,11 +32,7 @@ var loopTrack = false;
 
 var queueIdx = -1;
 var musicFolder = "./Music/";
-var musicQueue = [
-  "Touhou_Hisouten.ogg",
-  "Shoujo_Misshitsu.ogg",
-  "Reigin_Kansui.ogg",
-];
+var musicQueue = [];
 
 const player = createAudioPlayer();
 
@@ -142,7 +138,6 @@ function getCurentTrack()
 
 // Starts playing music in the channel where the bot is connected
 // Errors can arise when the bot is not in any voice channels
-
 function playMusic(msg)
 {
     var botVoiceState = msg.guild.voiceStates.cache.find((id)=>{
@@ -162,6 +157,7 @@ function playMusic(msg)
                 connection.subscribe(player);
 
                 msg.channel.send({embeds: [Embeds.trackInfo(color, "Started playing track", queueIdx+1, track)]});
+				client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
             }
         }
     }
@@ -179,7 +175,11 @@ player.on(AudioPlayerStatus.Idle, () => {
         });
 
         player.play(resource);
+		client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
     }
+	else
+	{	client.user.setPresence({ activities: [{ name: "" }] });
+	}
 });
 
 // Pauses the current track
@@ -187,6 +187,7 @@ function pauseTrack(msg)
 {
     player.pause(msg);
     msg.channel.send({embeds: [Embeds.info(color, "Paused playing track")]});
+	client.user.setPresence({ activities: [{ name: "" }] });
 }
 
 // Resumes the current track
@@ -194,6 +195,7 @@ function resumeTrack(msg)
 {
     player.unpause(msg);
     msg.channel.send({embeds: [Embeds.trackInfo(color, "Resuming playing track", queueIdx+1, musicQueue[queueIdx])]});
+	client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+musicQueue[queueIdx] }] });
 }
 
 // Restarts playing the current track
@@ -208,6 +210,7 @@ function restartTrack(msg)
         
         player.play(resource);
         msg.channel.send({embeds: [Embeds.trackInfo(color, "Rewinding current track", queueIdx+1, track)]});
+		client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
     }
 }
 
@@ -224,6 +227,7 @@ function restartQueue(msg)
 
         player.play(resource);
         msg.channel.send({embeds: [Embeds.trackInfo(color, "Restarting queue at track", queueIdx+1, track)]});
+		client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
     }
 }
 
@@ -239,6 +243,7 @@ function nextTrack(msg)
 
         player.play(resource);
         msg.channel.send({embeds: [Embeds.trackInfo(color, "Skipping to the next track", queueIdx+1, track)]});
+		client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
     }
 }
 
@@ -257,6 +262,7 @@ function gotoTrack(msg, tokens)
 
             player.play(resource);
             msg.channel.send({embeds: [Embeds.trackInfo(color, "Skipping to track", queueIdx+1, track)]});
+			client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
         }
     }
 }
@@ -285,6 +291,7 @@ function addMusic(msg, tokens)
         musicQueue.splice(idx, 0, tokens[1]);
         if(queueIdx >= idx)
         {   queueIdx++
+			client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+musicQueue[queueIdx] }] });
         }
     }
     else
@@ -314,6 +321,7 @@ function removeMusic(msg, tokens)
             musicQueue.splice(idx, 1);
             if(queueIdx > idx )
             {   queueIdx--;
+				client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+musicQueue[queueIdx] }] });
             }
         }
     }
@@ -431,28 +439,34 @@ async function onMessageCreate(msg)
     var utokens = msg.content.split(" ");
 
 	if(ltokens.length>0)
-	{	switch(ltokens[0])
-		{	case prefix+"connect" : connectChannel(msg); break; //OK
-            case prefix+"disconnect" : disconnectChannel(msg); break; //OK
-            case prefix+"play" : playMusic(msg); break; //OK
-            case prefix+"pause" : pauseTrack(msg); break; //OK
-            case prefix+"resume" : resumeTrack(msg); break; //OK
-            case prefix+"restartqueue" : restartQueue(msg); break; //OK
-            case prefix+"restarttrack" : restartTrack(msg); break; //OK
-            case prefix+"next" : nextTrack(msg); break; //OK
-            case prefix+"goto" : gotoTrack(msg, ltokens); break; //OK
-            case prefix+"list" : listQueue(msg); break; //OK
-            case prefix+"add" :  addMusic(msg, utokens);break; //OK
-            case prefix+"remove" : removeMusic(msg, utokens); break; //OK
+	{	
+		if(msg.member.permissions.has(Permissions.FLAGS.MOVE_MEMBERS))
+		{
+			switch(ltokens[0])
+			{	case prefix+"connect" : connectChannel(msg); break; //OK
+				case prefix+"disconnect" : disconnectChannel(msg); break; //OK
+				case prefix+"play" : playMusic(msg); break; //OK
+				case prefix+"pause" : pauseTrack(msg); break; //OK
+				case prefix+"resume" : resumeTrack(msg); break; //OK
+				case prefix+"restartqueue" : restartQueue(msg); break; //OK
+				case prefix+"restarttrack" : restartTrack(msg); break; //OK
+				case prefix+"next" : nextTrack(msg); break; //OK
+				case prefix+"goto" : gotoTrack(msg, ltokens); break; //OK
+				case prefix+"list" : listQueue(msg); break; //OK
+				case prefix+"add" :  addMusic(msg, utokens);break; //OK
+				case prefix+"remove" : removeMusic(msg, utokens); break; //OK
 
-            case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
-            case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
-            case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
+				case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
+				case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
+				case prefix+"shuffle" : toggleShuffle(msg, ltokens); break; //OK
 
-            case prefix+"download": downloadMusic(msg); break;
-        
-            case prefix+"help" : msg.channel.send({embeds:[Embeds.help()]}); break; 
-            case prefix+"status" : statusInfo(msg); break; 
+				case prefix+"download": downloadMusic(msg); break;
+			
+				case prefix+"help" : msg.channel.send({embeds:[Embeds.help(color)]}); break;  
+			}
+		}
+		switch(ltokens[0])
+		{	case prefix+"status" : statusInfo(msg); break; 
 		}
 	}	
 }
@@ -460,4 +474,4 @@ async function onMessageCreate(msg)
 client.on("ready", onReady);
 client.on("messageCreate", onMessageCreate);
 
-client.login(process.env.BOT_TOKEN);
+client.login(process.env.BOT_TOKEN1);

@@ -58,7 +58,7 @@ module.exports = {
     },
 
     // Displays help information
-    help: function help(color, queue)
+    help: function help(color)
     {
         var vc  = "`connect`, `disconnect`";
         var trk = "`play`, `pause`, `resume`, `next`, `goto`, `restartTrack`, `restartQueue`";

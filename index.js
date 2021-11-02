@@ -34,6 +34,8 @@ var queueIdx = -1;
 var musicFolder = "./Music/";
 var musicQueue = [];
 
+var musicChannels = require('./channels.json');
+
 const player = createAudioPlayer();
 
 //######################## Functions #########################//
@@ -422,6 +424,56 @@ function statusInfo(msg)
 
 }
 
+async function loadQueue()
+{
+    await fs.readdir(musicFolder, (err, files) => {
+        if(err) {
+            return console.error(err);
+        } 
+
+        files.forEach(file => {
+          console.log(file);
+          musicQueue.push(file);
+        });
+    });
+}
+
+function switchMusicChannel(msg, ltokens)
+{
+    var newChannel = ltokens[1];
+    console.log(`newchannel = ${newChannel}`);
+
+    var newChannelIdx = musicChannels.findIndex(i => i.toLowerCase() === newChannel);
+
+    if(newChannelIdx === -1) return msg,channel.send("Channel doesn't exist!"); //channel not found
+    else {
+        musicFolder = `./${musicChannels[newChannelIdx]}/`;
+
+        loadQueue();
+
+        msg.channel.send(`Channel switched to \`${musicChannels[newChannelIdx]}\``);
+        setStatus(`🎵 ${musicChannels[newChannelIdx]} 🎵`);
+    }
+}
+
+function createMusicChannel(msg, ltokens)
+{
+    var channelName = ltokens[1];
+    musicChannels.push(channelName);
+    const fileName = './channels.json';
+
+    fs.writeFile(fileName, JSON.stringify(musicChannels), function writeJSON(err) {
+        if (err) return console.log(err);
+        console.log(JSON.stringify(musicChannels));
+        console.log('writing to ' + fileName);
+    });
+}
+
+function setStatus(status)
+{
+    client.user.setPresence({ activities: [{ name: status }]});
+}
+
 //########################## Events ##########################//
 
 // Event that executes when the client is ready
@@ -455,6 +507,9 @@ async function onMessageCreate(msg)
 				case prefix+"list" : listQueue(msg); break; //OK
 				case prefix+"add" :  addMusic(msg, utokens);break; //OK
 				case prefix+"remove" : removeMusic(msg, utokens); break; //OK
+
+                case prefix+"channel" : switchMusicChannel(msg, ltokens); break; //OK
+                case prefix+"createchannel" : createMusicChannel(msg, utokens); break; //OK
 
 				case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
 				case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;

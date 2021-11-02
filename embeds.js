@@ -45,14 +45,21 @@ module.exports = {
     // Displays all tracks in the queue
     listQueue: function listQueue(color, queue)
     {
-        var tracks="";
-        for(var i=0; i<queue.length; i++)
-        {   tracks += "["+(i+1)+"] - " + queue[i] + "\n";
-        }
-
-        var embed = new MessageEmbed()
+        if(queue.length === 0) {
+            var embed = new MessageEmbed()
             .setColor(color)
-		    .setDescription("**✅ List of Music Tracks in the Queue**\n"+tracks);
+		    .setDescription("**❌ No Music Tracks in the Queue**");
+        }
+        else {
+            var tracks="";
+            for(var i=0; i<queue.length; i++)
+            {   tracks += "["+(i+1)+"] - " + queue[i] + "\n";
+            }
+    
+            var embed = new MessageEmbed()
+                .setColor(color)
+                .setDescription("**✅ List of Music Tracks in the Queue**\n"+tracks);
+        }
 
 		return embed;
     },

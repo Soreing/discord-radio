@@ -12,12 +12,22 @@ module.exports = {
 		return embed;
 	},
 
-    // Displays an error message
+    // Displays a normal message
 	info: function info(color, text)
 	{
 		var embed = new MessageEmbed()
             .setColor(color)
 		    .setDescription("**✅ " + text + "**");
+
+		return embed;
+	},
+
+    // Displays a warning message
+	warning: function warning(color, text)
+	{
+		var embed = new MessageEmbed()
+            .setColor(color)
+		    .setDescription("**⚠️ " + text + "**");
 
 		return embed;
 	},

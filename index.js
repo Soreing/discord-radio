@@ -19,6 +19,7 @@ const client = new Client({
 
 const fs = require("fs");
 const https = require("https");
+const embeds = require('./embeds.js');
 
 //####################### Gloval Vars ########################//
 
@@ -33,8 +34,6 @@ var loopTrack = false;
 var queueIdx = -1;
 var musicFolder = "./Music/";
 var musicQueue = [];
-
-var musicChannels = require('./channels.json');
 
 const player = createAudioPlayer();
 
@@ -228,7 +227,7 @@ function restartQueue(msg)
         });
 
         player.play(resource);
-        msg.channel.send({embeds: [Embeds.trackInfo(color, "Restarting queue at track", queueIdx+1, track)]});
+        if(msg) {msg.channel.send({embeds: [Embeds.trackInfo(color, "Restarting queue at track", queueIdx+1, track)]});}
 		client.user.setPresence({ activities: [{ name: "["+(queueIdx+1)+"] - "+track }] });
     }
 }
@@ -402,10 +401,26 @@ function downloadMusic(msg) {
         return;
     }
 
-    const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
-    const request = https.get(oggAttachment.url, function (res) {
-        res.pipe(file);
-    });
+    if(!fs.existsSync(musicFolder)){
+        fs.mkdir(musicFolder, (err)=>{
+            if(!err){
+                const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
+                const request = https.get(oggAttachment.url, function (res) {
+                    res.pipe(file);
+                    musicQueue.push(oggAttachment.name);
+                    msg.channel.send({embeds: [Embeds.info(color, `Track \`${oggAttachment.name}\` successfully imported!`)]});
+                });
+            }
+        });
+    }
+    else {
+        const file = fs.createWriteStream(musicFolder + "/" + oggAttachment.name);
+        const request = https.get(oggAttachment.url, function (res) {
+            res.pipe(file);
+            musicQueue.push(oggAttachment.name);
+            msg.channel.send({embeds: [Embeds.info(color, `Track \`${oggAttachment.name}\` successfully imported!`)]});
+        });
+    }
 }
 
 // Displays status information about the radio
@@ -424,51 +439,28 @@ function statusInfo(msg)
 
 }
 
-async function loadQueue()
+// Changes the music folder to another one 
+function switchMusicChannel(msg, channelName)
 {
-    await fs.readdir(musicFolder, (err, files) => {
-        if(err) {
-            return console.error(err);
-        } 
+    musicFolder = `./Music/${channelName}/`;
 
-        files.forEach(file => {
-          console.log(file);
-          musicQueue.push(file);
-        });
-    });
-}
-
-function switchMusicChannel(msg, ltokens)
-{
-    var newChannel = ltokens[1];
-    console.log(`newchannel = ${newChannel}`);
-
-    var newChannelIdx = musicChannels.findIndex(i => i.toLowerCase() === newChannel);
-
-    if(newChannelIdx === -1) return msg,channel.send("Channel doesn't exist!"); //channel not found
+    if(channelName){
+        if(fs.existsSync(musicFolder)){
+            musicQueue=fs.readdirSync(musicFolder);
+            msg.channel.send({embeds: [Embeds.info(color, `Channel switched to \`${channelName}\``)]});
+            restartQueue();
+        }
+        else {
+            musicQueue=[];
+            msg.channel.send({embeds: [Embeds.warning(color, `Channel switched to \`${channelName}\`\nFolder does not exist yet. Upload a file to create it!`)]});
+        }
+    }
     else {
-        musicFolder = `./${musicChannels[newChannelIdx]}/`;
-
-        loadQueue();
-
-        msg.channel.send(`Channel switched to \`${musicChannels[newChannelIdx]}\``);
-        setStatus(`🎵 ${musicChannels[newChannelIdx]} 🎵`);
+        msg.channel.send({embeds: [Embeds.error(color, "No Radio Channel name provided!")]});
     }
 }
 
-function createMusicChannel(msg, ltokens)
-{
-    var channelName = ltokens[1];
-    musicChannels.push(channelName);
-    const fileName = './channels.json';
-
-    fs.writeFile(fileName, JSON.stringify(musicChannels), function writeJSON(err) {
-        if (err) return console.log(err);
-        console.log(JSON.stringify(musicChannels));
-        console.log('writing to ' + fileName);
-    });
-}
-
+// TO DO: Perhaps change all otehr calls to this function 
 function setStatus(status)
 {
     client.user.setPresence({ activities: [{ name: status }]});
@@ -508,8 +500,7 @@ async function onMessageCreate(msg)
 				case prefix+"add" :  addMusic(msg, utokens);break; //OK
 				case prefix+"remove" : removeMusic(msg, utokens); break; //OK
 
-                case prefix+"channel" : switchMusicChannel(msg, ltokens); break; //OK
-                case prefix+"createchannel" : createMusicChannel(msg, utokens); break; //OK
+                case prefix+"channel" : switchMusicChannel(msg, utokens[1]); break; //OK
 
 				case prefix+"loopqueue" : toggleLoopQueue(msg, ltokens); break;
 				case prefix+"looptrack" : toggleLoopTrack(msg, ltokens); break;
